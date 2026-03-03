@@ -21,6 +21,7 @@ import jax
 from flax import linen as nn
 import lift_utils.types as types
 from typing import Optional, Any
+from world_model.interaction_latent import heuristic_interaction_latent
 ModelParams = Tuple[wm_base.ScalerParams, types.Params]
 
 class EnsembleDense(nn.Module):
@@ -123,6 +124,7 @@ def make_inference_fn(
     model_probabilistic: bool=True,
     plot_model_rollouts: bool=False,
     robot_config: Optional[Any] = None,
+    latent_dim: int = 0,
 ):
 
     def make_model(model_params: ModelParams):
@@ -137,7 +139,13 @@ def make_inference_fn(
             unscale_action = action / robot_config.policy_output_scale
             proc_obs, proc_act = preprocess_fn(last_wm_state, unscale_action,
                                                scaler_params)
-            x = jp.concatenate([proc_obs, proc_act], axis=-1)
+            if latent_dim > 0:
+                hist_obs = flat_obs.reshape((-1, wm_obs_size_per_step))
+                hist_act = jp.expand_dims(unscale_action, axis=0)
+                z_t = heuristic_interaction_latent(hist_obs, hist_act, latent_dim)
+                x = jp.concatenate([proc_obs, proc_act, z_t], axis=-1)
+            else:
+                x = jp.concatenate([proc_obs, proc_act], axis=-1)
             # repeat x across ensemble dimension
             x = jp.tile(x, (ensemble_model.ensemble_size,) + (1,))
 

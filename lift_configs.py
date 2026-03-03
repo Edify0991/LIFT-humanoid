@@ -5,7 +5,11 @@ _DEFAULT_WANDB_ENTITY = "xxx"
 
 def pretrain_sac_config(env_name: str) -> config_dict.ConfigDict:
     """Returns tuned Brax SAC config for the given environment."""
-    env_config = locomotion.get_default_config(env_name)
+    try:
+        env_config = locomotion.get_default_config(env_name)
+    except Exception:
+        # Brax-only custom envs (e.g. payload prototype) are not in MuJoCo registry.
+        env_config = config_dict.create(episode_length=1000)
     pretrain_sac_config = config_dict.create(
         render=False,
         wandb_entity=_DEFAULT_WANDB_ENTITY,
@@ -65,6 +69,7 @@ def pretrain_sac_config(env_name: str) -> config_dict.ConfigDict:
         "T1LowDimJoystickRoughTerrain",
         "T1LowDimSimFinetuneJoystickFlatTerrain",
         "T1LowDimSimFinetuneJoystickRoughTerrain",
+        "G1LowDimPayloadWalking",
     ):
         pretrain_sac_config.num_timesteps = 5_000_000_000
         pretrain_sac_config.num_evals = 1000
@@ -135,6 +140,7 @@ def pretrain_wm_config(env_name: str) -> config_dict.ConfigDict:
         model_training_convergence_criteria=0.01,
         ssrl_dynamics_fn='contact_integrate_only',
         wm_obs_history_length=1,
+        interaction_latent_dim=6,
         seed=0,
     )
     return wm_config
@@ -228,7 +234,8 @@ def finetune_sac_config(env_name: str) -> config_dict.ConfigDict:
             hidden_size=wm_config.hidden_size,
             ensemble_size=wm_config.ensemble_size,
             num_elites=wm_config.num_elites,   
-            model_probabilistic=wm_config.model_probabilistic
+            model_probabilistic=wm_config.model_probabilistic,
+            interaction_latent_dim=wm_config.interaction_latent_dim
         ),
         linear_threshold_fn=config_dict.create(
             start_epoch=0,

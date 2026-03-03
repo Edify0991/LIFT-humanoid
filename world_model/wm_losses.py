@@ -19,6 +19,7 @@ from jax import numpy as jp
 import jax
 from typing import Callable
 from typing import Optional, Any
+from world_model.interaction_latent import heuristic_interaction_latent
 def make_losses(
     key: types.PRNGKey,
     ensemble_model: wm_networks.EnsembleModel,
@@ -35,6 +36,7 @@ def make_losses(
     model_training_stop_gradient: bool = False,
     mean_loss_over_horizon: bool = False,  # used only for model evaluation,
     robot_config: Optional[Any] = None,
+    latent_dim: int = 0,
 ):
 
     def model_loss(model_params: types.Params,
@@ -60,6 +62,7 @@ def make_losses(
             dynamics_fn, 
             model_training_stop_gradient,
             robot_config,
+            latent_dim,
             )
         obs_next_r = obs_next_stack_r
 
@@ -128,6 +131,7 @@ def propagate_obs_batch(
         dynamics_fn: Callable, 
         model_training_stop_gradient: bool = False,
         robot_config: Optional[Any] = None,
+        latent_dim: int = 0,
         ):
 
     # obs_stack_r, obs_next_stack_r, actions_r shapes:
@@ -153,7 +157,16 @@ def propagate_obs_batch(
             unscale_actions_r = actions_r / robot_config.policy_output_scale
             proc_obs_stack, proc_act_r = preprocess_fn(obs, unscale_actions_r,
                                                        scaler_params)
-            x = jp.concatenate([proc_obs_stack, proc_act_r], axis=-1)
+            if latent_dim > 0:
+                # ψ(obs, action history) -> z_t (prototype: heuristic encoder)
+                z_t = jax.vmap(heuristic_interaction_latent, in_axes=(0, 0, None))(
+                    obs_stack.reshape(obs_stack.shape[0], 1, -1),
+                    actions_r.reshape(actions_r.shape[0], 1, -1),
+                    latent_dim,
+                )
+                x = jp.concatenate([proc_obs_stack, proc_act_r, z_t], axis=-1)
+            else:
+                x = jp.concatenate([proc_obs_stack, proc_act_r], axis=-1)
             means, logvars = ensemble_model.apply(
                 {'params': model_params, **other_vars}, x, train=True, rngs={'dropout': key})
 
