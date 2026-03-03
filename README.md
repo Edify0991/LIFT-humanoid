@@ -237,6 +237,19 @@ CUDA_VISIBLE_DEVICES=0 python finetune.py --env_name=T1LowDimRealFinetuneJoystic
 ```
 
 
+
+
+---
+
+## 🧩 Mimic task extension (redirected mocap + SAC)
+
+This repository now includes a minimal mimic-task extension scaffold:
+
+- `mimic/reference_motion.py`: redirected mocap clip loader + motion library.
+- `mimic/rewards.py`: DeepMimic-style tracking reward terms.
+- `lift_configs.py`: `mimic_sac_config()` and `mimic_reward_config()`.
+- `docs/framework_and_mimic.md`: code mapping of the three LIFT stages and integration notes for mimic training.
+
 ### 4. Sim2Real zero-shot deployment (T1LowDimJoystickRoughTerrain)
 
 For **zero-shot real deployment**, pretrain on **`T1LowDimJoystickRoughTerrain`**, convert the SAC policy to TorchScript, validate in MuJoCo, then deploy with BoosterGym.
