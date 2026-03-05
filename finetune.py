@@ -331,7 +331,7 @@ def main(argv):
 
     latent_dim = getattr(cfg.world_model_config, "interaction_latent_dim", 0)
     model_network = model_network_factory(
-        obs_size=wm_obs_size + env.action_size + latent_dim,
+        obs_size=wm_obs_size,
         output_dim=model_output_dim,
     )
 

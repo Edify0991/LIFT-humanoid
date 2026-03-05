@@ -204,7 +204,7 @@ def train(
         else model_use_env.sys.qd_size()
     )
     model_network = wm_networks.make_model_network(
-       obs_size=wm_obs_size + action_size + interaction_latent_dim, 
+       obs_size=wm_obs_size, 
        output_dim=model_output_dim,
        hidden_size=hidden_size,
        ensemble_size=ensemble_size,

@@ -118,6 +118,8 @@ def train(
     plot_model_rollouts: bool = True,
     entropy_rate: float = 0.0,
     target_entropy_coef: float = 0.0,
+    distillation_coef: float = 0.0,
+    residual_l2_coef: float = 0.0,
     robot_config: Optional[Any] = None,
 ):
 
@@ -711,13 +713,26 @@ def train(
                 axis=-1
             )
             kl_mean = jp.mean(kl)
+            residual_mse = jp.mean(jp.square(action_mean - action_mean_original))
             if device_count > 1:
                 kl_mean = jax.lax.pmean(kl_mean, axis_name=_PMAP_AXIS_NAME)
+                residual_mse = jax.lax.pmean(residual_mse, axis_name=_PMAP_AXIS_NAME)
+
+            # Lightweight residual/distillation regularization:
+            # keep policy close to prior when requested.
+            blend_coef = jp.clip(distillation_coef + residual_l2_coef * residual_mse, 0.0, 1.0)
+            policy_params = jax.tree_util.tree_map(
+                lambda p, p0: (1.0 - blend_coef) * p + blend_coef * p0,
+                policy_params,
+                training_state.original_policy_params,
+            )
 
             metrics = {
                 'critic_loss': critic_loss,
                 'actor_loss': actor_loss,
                 'kl_loss': kl_mean,
+                'residual_mse': residual_mse,
+                'policy_blend_coef': blend_coef,
                 'alpha_loss': alpha_loss,
                 'alpha': jp.exp(alpha_params),
             }

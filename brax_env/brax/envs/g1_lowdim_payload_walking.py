@@ -26,6 +26,7 @@ class G1LowDimPayloadWalking(G1LowDimJoystick):
         payload_side: str = "left",
         payload_inject_step: int = 0,
         payload_torque_scale: float = 0.02,
+        force_frame: str = "body",
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -34,6 +35,7 @@ class G1LowDimPayloadWalking(G1LowDimJoystick):
         self._payload_side = payload_side
         self._payload_inject_step = payload_inject_step
         self._payload_torque_scale = payload_torque_scale
+        self._force_frame = force_frame
         # equivalent disturbance on hip-roll/hip-yaw for asymmetry
         self._left_disturbance = jp.array([0.0, 1.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         self._right_disturbance = jp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, -0.5, 0.0, 0.0, 0.0])
@@ -65,6 +67,8 @@ class G1LowDimPayloadWalking(G1LowDimJoystick):
         info = dict(state.info)
         info["payload_mass"] = payload_mass
         info["payload_force_z"] = -payload_mass * 9.81
+        info["payload_force_vec"] = jp.array([0.0, 0.0, info["payload_force_z"]])
+        info["payload_force_frame"] = self._force_frame
 
         obs = self._append_payload_privileged(state.obs, payload_mass)
         metrics = dict(state.metrics)

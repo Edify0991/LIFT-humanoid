@@ -224,6 +224,8 @@ def finetune_sac_config(env_name: str) -> config_dict.ConfigDict:
             load_alpha=False,
             entropy_rate=0.0,
             target_entropy_coef=0.5,
+            distillation_coef=0.0,
+            residual_l2_coef=0.0,
         ),
 
         finetune_env_config=config_dict.create(
