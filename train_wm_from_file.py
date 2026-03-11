@@ -30,6 +30,7 @@ from lift_configs import finetune_sac_config, pretrain_wm_config
 from world_model import pretrain_wm as sac_wm
 from etils import epath
 from brax.envs.g1_lowdim_joystick import G1LowDimJoystick
+from brax.envs.g1_lowdim_payload_walking import G1LowDimPayloadWalking
 from brax.envs.t1_lowdim_sim_joystick import T1LowDimSimJoystick
 from brax.envs.t1_lowdim_real_joystick import T1LowDimRealJoystick
 from brax.robots.g1.utils import g1Utils
@@ -141,6 +142,7 @@ def main(argv):
     env_kwargs = finetune_cfg.finetune_env_config.to_dict()
     env_dict = {
         'G1LowDimJoystickFlatTerrain': G1LowDimJoystick,
+        'G1LowDimPayloadWalking': G1LowDimPayloadWalking,
         'G1LowDimJoystickRoughTerrain': G1LowDimJoystick,
         'T1LowDimSimFinetuneJoystickFlatTerrain': T1LowDimSimJoystick,
         'T1LowDimSimFinetuneJoystickRoughTerrain': T1LowDimSimJoystick,
@@ -149,6 +151,7 @@ def main(argv):
     }
     robot_config_dict = {
         'G1LowDimJoystickFlatTerrain': g1Utils,
+        'G1LowDimPayloadWalking': g1Utils,
         'G1LowDimJoystickRoughTerrain': g1Utils,
         'T1LowDimSimFinetuneJoystickFlatTerrain': T1SimUtils,
         'T1LowDimSimFinetuneJoystickRoughTerrain': T1SimUtils,

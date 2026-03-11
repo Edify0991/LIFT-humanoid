@@ -16,6 +16,7 @@ import dill
 import numpy as np
 
 from brax.envs.g1_lowdim_joystick import G1LowDimJoystick
+from brax.envs.g1_lowdim_payload_walking import G1LowDimPayloadWalking
 from brax.envs.t1_lowdim_sim_joystick import T1LowDimSimJoystick
 from brax.envs.t1_lowdim_real_joystick import T1LowDimRealJoystick
 
@@ -250,6 +251,7 @@ def main(argv):
     # create env fn
     env_dict = {
         'G1LowDimJoystickFlatTerrain': G1LowDimJoystick,
+        'G1LowDimPayloadWalking': G1LowDimPayloadWalking,
         'T1LowDimSimFinetuneJoystickFlatTerrain': T1LowDimSimJoystick,
         'T1LowDimSimFinetuneJoystickRoughTerrain': T1LowDimSimJoystick,
         'T1LowDimRealFinetuneJoystickFlatTerrain': T1LowDimRealJoystick,
@@ -283,6 +285,7 @@ def main(argv):
 
     robot_config_dict = {
         'G1LowDimJoystickFlatTerrain': g1Utils,
+        'G1LowDimPayloadWalking': g1Utils,
         'T1LowDimSimFinetuneJoystickFlatTerrain': T1SimUtils,
         'T1LowDimSimFinetuneJoystickRoughTerrain': T1SimUtils,
         'T1LowDimRealFinetuneJoystickFlatTerrain': T1RealUtils,
@@ -326,6 +329,7 @@ def main(argv):
         num_elites=cfg.world_model_config.num_elites,
         probabilistic=cfg.world_model_config.model_probabilistic)
 
+    latent_dim = getattr(cfg.world_model_config, "interaction_latent_dim", 0)
     model_network = model_network_factory(
         obs_size=wm_obs_size,
         output_dim=model_output_dim,
@@ -342,6 +346,7 @@ def main(argv):
         reward_fn=env.compute_reward,
         plot_model_rollouts=False,
         robot_config=robot_config_dict[env_name],
+        latent_dim=latent_dim,
     )
     make_model_subreward = wm_networks.make_inference_fn(
         ensemble_model=model_network,
@@ -354,6 +359,7 @@ def main(argv):
         reward_fn=env.compute_reward,
         plot_model_rollouts=True,
         robot_config=robot_config_dict[env_name],
+        latent_dim=latent_dim,
     )
 
     # NOTE: params are dynamic, function is static

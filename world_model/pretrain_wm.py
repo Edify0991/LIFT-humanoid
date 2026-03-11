@@ -96,10 +96,11 @@ def _init_training_state(
     wm_obs_size_per_step: int,
     wm_obs_hist_len: int, 
     action_size: int,
+    interaction_latent_dim: int = 0,
 ) -> wm_base.WM_TrainingState:
     """Inits the world model training state and replicates it over devices."""
     dummy_X = jnp.zeros((model_network.ensemble_size,
-                      wm_obs_size_per_step * wm_obs_hist_len + action_size))
+                      wm_obs_size_per_step * wm_obs_hist_len + action_size + interaction_latent_dim))
     model_params = model_network.init(key, dummy_X)
     model_optimizer_state = model_optimizer.init(model_params['params'])
 
@@ -144,6 +145,7 @@ def train(
     ssrl_dynamics_fn: str = 'contact_integrate_only', #'mbpo'
     wm_obs_history_length: int = 1,
     seed: int = 0,
+    interaction_latent_dim: int = 0,
 ):
     """World model pretraining."""
     process_id = jax.process_index()
@@ -225,7 +227,8 @@ def train(
         model_training_weight_decay=model_training_weight_decay,
         model_training_stop_gradient=model_training_stop_gradient,
         mean_loss_over_horizon=mean_loss_over_horizon,
-        robot_config=robot_config)
+        robot_config=robot_config,
+        latent_dim=interaction_latent_dim)
     model_optimizer = optax.adam(wm_learning_rate)
 
     model_update = gradients.gradient_update_fn(
@@ -470,6 +473,7 @@ def train(
         wm_obs_size_per_step=wm_obs_size_per_step,
         wm_obs_hist_len=wm_obs_hist_len,
         action_size=action_size,
+        interaction_latent_dim=interaction_latent_dim,
     )
     del global_key
 

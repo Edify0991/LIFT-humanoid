@@ -5,7 +5,11 @@ _DEFAULT_WANDB_ENTITY = "xxx"
 
 def pretrain_sac_config(env_name: str) -> config_dict.ConfigDict:
     """Returns tuned Brax SAC config for the given environment."""
-    env_config = locomotion.get_default_config(env_name)
+    try:
+        env_config = locomotion.get_default_config(env_name)
+    except Exception:
+        # Brax-only custom envs (e.g. payload prototype) are not in MuJoCo registry.
+        env_config = config_dict.create(episode_length=1000)
     pretrain_sac_config = config_dict.create(
         render=False,
         wandb_entity=_DEFAULT_WANDB_ENTITY,
@@ -65,6 +69,7 @@ def pretrain_sac_config(env_name: str) -> config_dict.ConfigDict:
         "T1LowDimJoystickRoughTerrain",
         "T1LowDimSimFinetuneJoystickFlatTerrain",
         "T1LowDimSimFinetuneJoystickRoughTerrain",
+        "G1LowDimPayloadWalking",
     ):
         pretrain_sac_config.num_timesteps = 5_000_000_000
         pretrain_sac_config.num_evals = 1000
@@ -135,6 +140,7 @@ def pretrain_wm_config(env_name: str) -> config_dict.ConfigDict:
         model_training_convergence_criteria=0.01,
         ssrl_dynamics_fn='contact_integrate_only',
         wm_obs_history_length=1,
+        interaction_latent_dim=6,
         seed=0,
     )
     return wm_config
@@ -218,6 +224,8 @@ def finetune_sac_config(env_name: str) -> config_dict.ConfigDict:
             load_alpha=False,
             entropy_rate=0.0,
             target_entropy_coef=0.5,
+            distillation_coef=0.0,
+            residual_l2_coef=0.0,
         ),
 
         finetune_env_config=config_dict.create(
@@ -228,7 +236,8 @@ def finetune_sac_config(env_name: str) -> config_dict.ConfigDict:
             hidden_size=wm_config.hidden_size,
             ensemble_size=wm_config.ensemble_size,
             num_elites=wm_config.num_elites,   
-            model_probabilistic=wm_config.model_probabilistic
+            model_probabilistic=wm_config.model_probabilistic,
+            interaction_latent_dim=wm_config.interaction_latent_dim
         ),
         linear_threshold_fn=config_dict.create(
             start_epoch=0,
@@ -246,3 +255,51 @@ def finetune_sac_config(env_name: str) -> config_dict.ConfigDict:
     )
 
     return finetune_config
+
+
+def mimic_sac_config() -> config_dict.ConfigDict:
+    """SAC hyper-parameters for humanoid mimic training."""
+    return config_dict.create(
+        num_timesteps=200_000_000,
+        num_evals=200,
+        episode_length=1000,
+        normalize_observations=True,
+        action_repeat=1,
+        discounting=0.99,
+        num_envs=4096,
+        num_eval_envs=512,
+        batch_size=4096,
+        grad_updates_per_step=16,
+        min_replay_size=8192,
+        max_replay_size=2_000_000,
+        tau=0.005,
+        actor_learning_rate=1e-4,
+        critic_learning_rate=2e-4,
+        alpha_learning_rate=1e-3,
+        int_log_alpha=-5.0,
+        reward_scaling=1.0,
+        target_entropy_coef=0.5,
+        entropy_rate=0.0,
+        network_factory=config_dict.create(
+            policy_hidden_layer_sizes=(512, 256, 128),
+            q_hidden_layer_sizes=(1024, 512, 256),
+            policy_obs_key="state",
+            value_obs_key="privileged_state",
+            activation="swish",
+            q_network_layer_norm=False,
+        ),
+    )
+
+
+def mimic_reward_config() -> config_dict.ConfigDict:
+    """Reward composition for redirected mocap imitation."""
+    return config_dict.create(
+        joint_pos_weight=0.45,
+        joint_vel_weight=0.10,
+        key_body_weight=0.35,
+        root_weight=0.10,
+        joint_pos_sigma=2.0,
+        joint_vel_sigma=0.1,
+        key_body_sigma=10.0,
+        root_sigma=5.0,
+    )
